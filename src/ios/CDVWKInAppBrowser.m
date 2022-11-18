@@ -475,6 +475,39 @@ static CDVWKInAppBrowser* instance = nil;
     [self injectDeferredObject:[command argumentAtIndex:0] withWrapper:jsWrapper];
 }
 
+- (void)clearCookies:(CDVInvokedUrlCommand*)command
+{
+    NSString* domainName = [command argumentAtIndex:0];
+    if (domainName && [domainName length] > 0) {
+        WKWebsiteDataStore *dataStore = [WKWebsiteDataStore defaultDataStore];
+        [dataStore
+            fetchDataRecordsOfTypes:[NSSet setWithObjects:WKWebsiteDataTypeCookies, nil]
+            completionHandler:^(NSArray<WKWebsiteDataRecord *> * __nonnull records) {
+                for (WKWebsiteDataRecord *record in records) {
+                    if ([record.displayName containsString:domainName]) {
+                        [dataStore removeDataOfTypes:record.dataTypes forDataRecords:@[record] completionHandler:^{
+                            CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+                            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+                        }];
+                    }
+                }
+            }
+        ];
+    } else {
+        WKWebsiteDataStore* dataStore = [WKWebsiteDataStore defaultDataStore];
+        // Deletes all cookies
+        WKHTTPCookieStore* cookieStore = dataStore.httpCookieStore;
+        [cookieStore getAllCookies:^(NSArray* cookies) {
+            NSHTTPCookie* cookie;
+            for (cookie in cookies){
+                [cookieStore deleteCookie:cookie completionHandler:nil];
+            }
+            CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+        }];
+    }
+}
+
 - (BOOL)isValidCallbackId:(NSString *)callbackId
 {
     NSError *err = nil;
