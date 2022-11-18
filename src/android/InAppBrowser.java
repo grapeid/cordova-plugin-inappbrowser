@@ -340,18 +340,21 @@ public class InAppBrowser extends CordovaPlugin {
             String domainName = args.optString(0);
             if (domainName.isEmpty()) {
                 cookieMgr.removeAllCookies(null);
+                cookieMgr.flush();
             } else {
                 // Add https:// protocol to read all secure cookies too
                 // https://stackoverflow.com/questions/30310627/reading-secure-cookies-in-android-webview
                 String cookieString = cookieMgr.getCookie("https://" + domainName);
-                // Expire cookie one by one
-                for (String cookie : cookieString.split(";")) {
-                    String cookieName = cookie.split("=")[0];
-                    // https://stackoverflow.com/questions/23419913/android-webview-remove-cookies-from-specific-domain/23521188#23521188
-                    cookieMgr.setCookie("https://." + domainName, cookieName + "=; Max-Age=-1");
+                if (cookieString != null) {
+                    // Expire cookie one by one
+                    for (String cookie : cookieString.split(";")) {
+                        String cookieName = cookie.split("=")[0];
+                        // https://stackoverflow.com/questions/23419913/android-webview-remove-cookies-from-specific-domain/23521188#23521188
+                        cookieMgr.setCookie("https://." + domainName, cookieName + "=; Max-Age=-1");
+                    }
+                    cookieMgr.flush();
                 }
             }
-            cookieMgr.flush();
             callbackContext.success();
         }
         else {
